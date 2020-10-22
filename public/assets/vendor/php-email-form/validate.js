@@ -99,29 +99,59 @@
     var this_form = $(this);
     var action = $(this).attr('action');
 
-    if( ! action ) {
+    /*if( ! action ) {
       this_form.find('.loading').slideUp();
       this_form.find('.error-message').slideDown().html('The form action property is not set!');
       return false;
-    }
+    }*/
     
     this_form.find('.sent-message').slideUp();
     this_form.find('.error-message').slideUp();
-    this_form.find('.loading').slideDown();
+    //this_form.find('.loading').slideDown();
 
     if ( $(this).data('recaptcha-site-key') ) {
       var recaptcha_site_key = $(this).data('recaptcha-site-key');
       grecaptcha.ready(function() {
         grecaptcha.execute(recaptcha_site_key, {action: 'php_email_form_submit'}).then(function(token) {
-          php_email_form_submit(this_form,action,this_form.serialize() + '&recaptcha-response=' + token);
+          firebase_email_submit(this_form,action,this_form.serialize() + '&recaptcha-response=' + token);
         });
       });
     } else {
-      php_email_form_submit(this_form,action,this_form.serialize());
+      firebase_email_submit(this_form,action,this_form.serialize());
     }
     
     return true;
   });
+
+  function firebase_email_submit(){
+    
+    const form = $('.php-email-form');
+    const name = form.find('#name').val();
+    const mail = form.find('#email').val();
+    const subject = form.find('#subject').val();
+    const message = form.find('#message').val();
+
+    function firebasePush(input){
+      if(!firebase.apps.length){
+        firebase.initializeApp(config);
+      }
+
+      let mailsRef = firebase.database().ref('emails').push().set({
+        mail:input.mail,
+        name:input.name,
+        subject:input.subject,
+        message:input.message
+      })
+    }
+
+    firebasePush({mail,name,subject,message})
+    
+    form.find('.sent-message').slideDown();
+    name.val('');
+    mail.val('');
+    subject.val('');
+    message.val('');
+  }
 
   function php_email_form_submit(this_form, action, data) {
     $.ajax({
